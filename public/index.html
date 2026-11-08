@@ -1,1 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peer Evaluation System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
 
+  <!-- Main App Shell -->
+  <div class="flex-1 flex min-h-screen overflow-hidden">
+    
+    <!-- Collapsible Sidebar -->
+    <aside id="sidebar" class="bg-slate-900 text-slate-300 w-64 min-h-screen flex flex-col transition-all duration-300 z-40 relative">
+      <!-- Brand Logo / Header -->
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+        <div class="flex items-center space-x-2 sidebar-label overflow-hidden whitespace-nowrap">
+          <div class="bg-indigo-600 text-white p-1.5 rounded-lg font-black text-sm">PE</div>
+          <span class="font-bold text-white text-sm tracking-wide">PeerEval System</span>
+        </div>
+        <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-lg focus:outline-none">
+          <svg id="sidebarToggleIcon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex-1 p-3 space-y-1.5">
+        <button onclick="switchTab('dashboard')" id="navDashboardBtn" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-800 transition text-indigo-400 bg-slate-800/80">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span class="sidebar-label">Dashboard</span>
+        </button>
+        <button onclick="switchTab('settings')" id="navSettingsBtn" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-800 transition text-slate-400">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="sidebar-label">User Settings</span>
+        </button>
+      </nav>
+
+      <!-- Current User Profile Footer -->
+      <div class="p-3 border-t border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2 overflow-hidden sidebar-label">
+          <div class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-xs shrink-0" id="userAvatar">U</div>
+          <div class="truncate">
+            <p id="userDisplayName" class="text-xs font-bold text-white truncate"></p>
+            <p id="userRoleBadge" class="text-[10px] text-slate-400 uppercase tracking-wider truncate"></p>
+          </div>
+        </div>
+        <button id="logoutBtn" title="Logout" class="text-slate-400 hover:text-red-400 p-1.5 rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content Area -->
+    <main class="flex-1 bg-slate-100 overflow-y-auto p-4 md:p-8">
+      
+      <!-- AUTHENTICATION VIEW -->
+      <div id="authView" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-slate-200 my-12 space-y-6">
+        <div class="text-center">
+          <h2 class="text-xl font-extrabold text-slate-900">Sign In to PeerEval</h2>
+          <p class="text-xs text-slate-500 mt-1">Enter your credentials to access your evaluation workspace</p>
+        </div>
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase">Email Address</label>
+            <input type="email" id="loginEmail" required class="w-full mt-1 p-2.5 border rounded-lg border-slate-300 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase">Password</label>
+            <input type="password" id="loginPassword" required class="w-full mt-1 p-2.5 border rounded-lg border-slate-300 text-sm">
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition text-sm shadow-md">
+            Sign In
+          </button>
+        </form>
+        <div id="authError" class="text-red-500 text-xs text-center hidden font-medium"></div>
+      </div>
+
+      <!-- ADMIN DASHBOARD TAB -->
+      <div id="adminView" class="hidden space-y-8 max-w-6xl mx-auto">
+        <!-- Metric Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl shadow-sm">
+            <span class="text-xs font-semibold text-indigo-600 uppercase">Total Groups</span>
+            <p id="statTotalGroups" class="text-2xl font-extrabold text-indigo-900 mt-1">0</p>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl shadow-sm">
+            <span class="text-xs font-semibold text-emerald-600 uppercase">Active Students</span>
+            <p id="statTotalStudents" class="text-2xl font-extrabold text-emerald-900 mt-1">0</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-100 p-4 rounded-xl shadow-sm">
+            <span class="text-xs font-semibold text-amber-600 uppercase">Submissions</span>
+            <p id="statTotalSubmissions" class="text-2xl font-extrabold text-amber-900 mt-1">0</p>
+          </div>
+          <div class="bg-purple-50 border border-purple-100 p-4 rounded-xl shadow-sm">
+            <span class="text-xs font-semibold text-purple-600 uppercase">Class Avg Score</span>
+            <p id="statAvgScore" class="text-2xl font-extrabold text-purple-900 mt-1">0.00</p>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="flex justify-between items-center border-b pb-3">
+          <h3 class="text-lg font-bold text-slate-900">Project Groups & Matrix Dashboard</h3>
+          <button onclick="toggleCreateGroupForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow transition">
+            + Create New Group
+          </button>
+        </div>
+
+        <!-- Create Group Collapsible Form (Admin Configures Course & Project Title) -->
+        <form id="createGroupForm" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h4 class="font-bold text-slate-800 text-sm">Create New Group & Set Course Settings</h4>
+            <button type="button" onclick="toggleCreateGroupForm()" class="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase">Group Name</label>
+              <input type="text" id="adminGroupName" required placeholder="e.g. Group 1 - System Project" class="w-full mt-1 p-2 border rounded text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase">Course / Subject (Set by Admin)</label>
+              <input type="text" id="adminCourseSubject" required placeholder="e.g. IT 312 - Software Engineering" class="w-full mt-1 p-2 border rounded text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase">Project Title (Set by Admin)</label>
+              <input type="text" id="adminProjectTitle" required placeholder="e.g. E-Commerce Platform v2" class="w-full mt-1 p-2 border rounded text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Group Members</label>
+            <div id="memberInputs" class="space-y-2">
+              <div class="flex items-center space-x-2">
+                <input type="text" placeholder="Full Name" required class="m-name w-1/2 p-2 border rounded text-xs">
+                <input type="email" placeholder="Email Address" required class="m-email w-1/2 p-2 border rounded text-xs">
+                <label class="flex items-center text-xs whitespace-nowrap"><input type="checkbox" class="m-leader mr-1"> Leader</label>
+              </div>
+            </div>
+            <button type="button" onclick="addMemberInput('memberInputs')" class="mt-3 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold px-3 py-1.5 rounded">
+              + Add Another Member
+            </button>
+          </div>
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs shadow">
+            Save Group & Generate Credentials
+          </button>
+        </form>
+
+        <!-- Existing Groups Grid -->
+        <section>
+          <div id="adminGroupsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <!-- Edit Group Modal -->
+        <div id="editGroupModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div class="bg-white rounded-xl shadow-xl max-w-xl w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+              <h3 class="font-bold text-slate-900 text-md">Edit Group & Course Configuration</h3>
+              <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form id="editGroupForm" class="space-y-4">
+              <input type="hidden" id="editGroupId">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase">Group Name</label>
+                <input type="text" id="editGroupName" required class="w-full mt-1 p-2 border rounded text-sm">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 uppercase">Course / Subject</label>
+                  <input type="text" id="editCourseSubject" required class="w-full mt-1 p-2 border rounded text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 uppercase">Project Title</label>
+                  <input type="text" id="editProjectTitle" required class="w-full mt-1 p-2 border rounded text-sm">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Group Members</label>
+                <div id="editMemberInputs" class="space-y-2 max-h-60 overflow-y-auto p-1"></div>
+                <button type="button" onclick="addMemberInput('editMemberInputs')" class="mt-2 text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold px-3 py-1.5 rounded">
+                  + Add Member
+                </button>
+              </div>
+              <div class="flex justify-end space-x-2 pt-3 border-t">
+                <button type="button" onclick="closeEditModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                <button type="submit" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded shadow">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Group Detail Inspector Drawer -->
+        <section id="groupInspector" class="hidden bg-white p-6 rounded-xl border border-indigo-200 space-y-6 shadow-sm">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-3 gap-3">
+            <div>
+              <h3 id="inspectGroupName" class="font-bold text-slate-900 text-lg"></h3>
+              <p id="inspectGroupMeta" class="text-xs text-slate-500 mt-0.5"></p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <a id="exportCsvBtn" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow transition">
+                Export CSV Report
+              </a>
+              <button onclick="closeInspector()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs px-3.5 py-2 rounded-lg font-medium">
+                Close Inspection
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Group Roster & Login Passwords</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left bg-slate-50 border rounded-lg">
+                <thead class="bg-slate-100 border-b">
+                  <tr>
+                    <th class="p-2.5">Name</th>
+                    <th class="p-2.5">Role</th>
+                    <th class="p-2.5">Email</th>
+                    <th class="p-2.5">Default Password</th>
+                  </tr>
+                </thead>
+                <tbody id="inspectRosterBody" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Peer Evaluation Final Scores</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left bg-slate-50 border rounded-lg">
+                <thead class="bg-slate-100 border-b">
+                  <tr>
+                    <th class="p-2.5">Student Name</th>
+                    <th class="p-2.5 text-center">Ratings Received</th>
+                    <th class="p-2.5 text-center">Weighted Score (/100)</th>
+                    <th class="p-2.5">Matrix Grade Interpretation</th>
+                  </tr>
+                </thead>
+                <tbody id="inspectScoresBody" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- STUDENT RATING TAB -->
+      <div id="studentView" class="hidden space-y-6 max-w-4xl mx-auto">
+        <!-- Preset Group Details Card (Read-only for Students) -->
+        <div id="studentGroupHeader" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span class="text-[10px] font-bold text-indigo-600 uppercase bg-indigo-50 px-2 py-0.5 rounded">Assigned Group</span>
+            <h2 id="studentGroupName" class="text-xl font-bold text-slate-900 mt-1"></h2>
+          </div>
+          <div class="text-left md:text-right text-xs text-slate-600">
+            <p><strong>Course/Subject:</strong> <span id="studentCourseDisplay" class="text-slate-800"></span></p>
+            <p><strong>Project Title:</strong> <span id="studentProjectDisplay" class="text-slate-800"></span></p>
+          </div>
+        </div>
+
+        <section class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-900 mb-3">Select Peer to Rate</h3>
+          <div id="peerList" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+        </section>
+
+        <!-- Rating Form -->
+        <form id="evalForm" class="space-y-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm hidden">
+          <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-lg flex justify-between items-center">
+            <div>
+              <p class="text-xs text-indigo-700 font-semibold">Currently Rating:</p>
+              <h3 id="targetPeerName" class="text-lg font-bold text-indigo-950"></h3>
+            </div>
+          </div>
+
+          <!-- Section A: Performance -->
+          <section>
+            <h3 class="font-bold text-slate-800 text-sm mb-2 border-b pb-1">A. Participation and Project Performance</h3>
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-slate-100 border-b">
+                  <th class="p-2 w-8 text-center">#</th>
+                  <th class="p-2">Criterion</th>
+                  <th class="p-2 text-center">5</th>
+                  <th class="p-2 text-center">4</th>
+                  <th class="p-2 text-center">3</th>
+                  <th class="p-2 text-center">2</th>
+                  <th class="p-2 text-center">1</th>
+                  <th class="p-2 text-center">N/O</th>
+                </tr>
+              </thead>
+              <tbody id="perfCriteriaBody" class="divide-y"></tbody>
+            </table>
+          </section>
+
+          <!-- Section B: Financial -->
+          <section>
+            <h3 class="font-bold text-slate-800 text-sm mb-2 border-b pb-1">B. Financial Contribution and Accountability</h3>
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-slate-100 border-b">
+                  <th class="p-2 w-8 text-center">#</th>
+                  <th class="p-2">Criterion</th>
+                  <th class="p-2 text-center">5</th>
+                  <th class="p-2 text-center">4</th>
+                  <th class="p-2 text-center">3</th>
+                  <th class="p-2 text-center">2</th>
+                  <th class="p-2 text-center">1</th>
+                  <th class="p-2 text-center">N/O</th>
+                </tr>
+              </thead>
+              <tbody id="finCriteriaBody" class="divide-y"></tbody>
+            </table>
+          </section>
+
+          <!-- Comments -->
+          <section class="space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm border-b pb-1">Comments & Observations</h3>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase">Specific Contributions</label>
+              <textarea id="commentsContrib" rows="2" class="w-full mt-1 p-2 border rounded text-xs"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase">Failures / Missing Duties</label>
+              <textarea id="commentsFailures" rows="2" class="w-full mt-1 p-2 border rounded text-xs"></textarea>
+            </div>
+          </section>
+
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition text-sm shadow">
+            Submit Rating
+          </button>
+        </form>
+      </div>
+
+      <!-- USER SETTINGS TAB -->
+      <div id="settingsView" class="hidden max-w-2xl mx-auto bg-white p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+        <div class="border-b pb-3">
+          <h2 class="text-lg font-bold text-slate-900">User Settings & Security</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Manage your account profile details and security credentials</p>
+        </div>
+
+        <form id="userSettingsForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase">Full Name</label>
+            <input type="text" id="settingsFullName" required class="w-full mt-1 p-2.5 border rounded-lg text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase">Email Address</label>
+            <input type="email" id="settingsEmail" required class="w-full mt-1 p-2.5 border rounded-lg text-sm">
+          </div>
+
+          <div class="border-t pt-4 space-y-3">
+            <h4 class="font-bold text-xs text-slate-700 uppercase">Change Password</h4>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600">Current Password</label>
+              <input type="password" id="settingsCurrentPassword" placeholder="Required only if changing password" class="w-full mt-1 p-2.5 border rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600">New Password</label>
+              <input type="password" id="settingsNewPassword" placeholder="Leave blank to keep current password" class="w-full mt-1 p-2.5 border rounded-lg text-sm">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs shadow transition">
+            Save Account Settings
+          </button>
+        </form>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const perfItems = [
+      "Participation and Attendance", "Task Completion", "Quality of Contribution",
+      "Initiative and Problem-Solving", "Cooperation and Teamwork",
+      "Communication and Responsiveness", "Accountability and Reliability", "Overall Project Contribution"
+    ];
+    const finItems = [
+      "Fulfillment of Agreed Financial Responsibilities", "Transparency in Payments and Expenses",
+      "Accountability for Shared Funds", "Fairness in Sharing Project Expenses"
+    ];
+
+    let currentUser = null;
+    let selectedPeerId = null;
+    let sidebarCollapsed = false;
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggleIcon = document.getElementById('sidebarToggleIcon');
+      sidebarCollapsed = !sidebarCollapsed;
+
+      if (sidebarCollapsed) {
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-16');
+        toggleIcon.classList.add('rotate-180');
+        document.querySelectorAll('.sidebar-label').forEach(el => el.classList.add('hidden'));
+      } else {
+        sidebar.classList.remove('w-16');
+        sidebar.classList.add('w-64');
+        toggleIcon.classList.remove('rotate-180');
+        document.querySelectorAll('.sidebar-label').forEach(el => el.classList.remove('hidden'));
+      }
+    }
+
+    function switchTab(tabName) {
+      document.getElementById('adminView').classList.add('hidden');
+      document.getElementById('studentView').classList.add('hidden');
+      document.getElementById('settingsView').classList.add('hidden');
+
+      document.getElementById('navDashboardBtn').classList.remove('bg-slate-800/80', 'text-indigo-400');
+      document.getElementById('navSettingsBtn').classList.remove('bg-slate-800/80', 'text-indigo-400');
+
+      if (tabName === 'dashboard') {
+        document.getElementById('navDashboardBtn').classList.add('bg-slate-800/80', 'text-indigo-400');
+        if (currentUser.role === 'admin') {
+          document.getElementById('adminView').classList.remove('hidden');
+          loadAdminDashboard();
+        } else {
+          document.getElementById('studentView').classList.remove('hidden');
+          loadGroupPeers();
+        }
+      } else if (tabName === 'settings') {
+        document.getElementById('navSettingsBtn').classList.add('bg-slate-800/80', 'text-indigo-400');
+        document.getElementById('settingsView').classList.remove('hidden');
+        document.getElementById('settingsFullName').value = currentUser.name;
+        document.getElementById('settingsEmail').value = currentUser.email;
+      }
+    }
+
+    function addMemberInput(containerId) {
+      const container = document.getElementById(containerId);
+      const div = document.createElement('div');
+      div.className = 'flex items-center space-x-2 member-row';
+      div.innerHTML = `
+        <input type="text" placeholder="Full Name" required class="m-name w-1/2 p-2 border rounded text-xs">
+        <input type="email" placeholder="Email Address" required class="m-email w-1/2 p-2 border rounded text-xs">
+        <label class="flex items-center text-xs whitespace-nowrap"><input type="checkbox" class="m-leader mr-1"> Leader</label>
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 font-bold px-1 text-xs">✕</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function toggleCreateGroupForm() {
+      const form = document.getElementById('createGroupForm');
+      form.classList.toggle('hidden');
+    }
+
+    function renderCriteriaTables() {
+      const perfBody = document.getElementById('perfCriteriaBody');
+      perfBody.innerHTML = perfItems.map((item, idx) => {
+        const num = idx + 1;
+        return `<tr>
+          <td class="p-2 text-center font-medium">${num}</td>
+          <td class="p-2">${item}</td>
+          ${[5,4,3,2,1,'N/O'].map(v => `<td class="p-2 text-center"><input type="radio" name="c_${num}" value="${v}" required></td>`).join('')}
+        </tr>`;
+      }).join('');
+
+      const finBody = document.getElementById('finCriteriaBody');
+      finBody.innerHTML = finItems.map((item, idx) => {
+        const num = idx + 9;
+        return `<tr>
+          <td class="p-2 text-center font-medium">${num}</td>
+          <td class="p-2">${item}</td>
+          ${[5,4,3,2,1,'N/O'].map(v => `<td class="p-2 text-center"><input type="radio" name="c_${num}" value="${v}" required></td>`).join('')}
+        </tr>`;
+      }).join('');
+    }
+
+    async function checkAuth() {
+      const res = await fetch('/api/me');
+      const data = await res.json();
+      if (data.user) {
+        currentUser = data.user;
+        document.getElementById('authView').classList.add('hidden');
+        document.getElementById('sidebar').classList.remove('hidden');
+        document.getElementById('userDisplayName').innerText = currentUser.name;
+        document.getElementById('userRoleBadge').innerText = currentUser.role;
+        document.getElementById('userAvatar').innerText = currentUser.name.charAt(0).toUpperCase();
+
+        switchTab('dashboard');
+      } else {
+        document.getElementById('authView').classList.remove('hidden');
+        document.getElementById('sidebar').classList.add('hidden');
+      }
+    }
+
+    async function loadAdminDashboard() {
+      const statsRes = await fetch('/api/admin/dashboard-stats');
+      const stats = await statsRes.json();
+      document.getElementById('statTotalGroups').innerText = stats.totalGroups || 0;
+      document.getElementById('statTotalStudents').innerText = stats.totalStudents || 0;
+      document.getElementById('statTotalSubmissions').innerText = stats.totalSubmissions || 0;
+      document.getElementById('statAvgScore').innerText = stats.avgScore || '0.00';
+
+      const res = await fetch('/api/admin/groups');
+      const data = await res.json();
+      const list = document.getElementById('adminGroupsList');
+      if (data.groups && data.groups.length > 0) {
+        list.innerHTML = data.groups.map(g => `
+          <div class="p-5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow transition flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex justify-between items-center">
+                <h4 class="font-bold text-slate-900 text-md">${g.group_name}</h4>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded ${g.isComplete ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                  ${g.isComplete ? '100% Completed' : 'In Progress'}
+                </span>
+              </div>
+              <p class="text-xs text-indigo-600 font-medium mt-1">${g.course_subject} • ${g.project_title}</p>
+              <p class="text-xs text-slate-500 mt-1">${g.member_count} Members • Progress: ${g.submitted_evals} / ${g.requiredTotal} ratings (${g.completionPercent}%)</p>
+              
+              <div class="w-full bg-slate-200 h-2 rounded-full mt-3 overflow-hidden">
+                <div class="bg-indigo-600 h-full transition-all" style="width: ${g.completionPercent}%"></div>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2 pt-2 border-t">
+              <button onclick="inspectGroup(${g.id})" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2 rounded-lg text-center transition">
+                Inspect Scores & Roster
+              </button>
+              <button onclick="openEditModal(${g.id})" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs px-3 py-2 rounded-lg transition">
+                Edit
+              </button>
+              <button onclick="deleteGroup(${g.id})" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs px-3 py-2 rounded-lg transition">
+                Delete
+              </button>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        list.innerHTML = '<p class="text-xs text-slate-400 col-span-2 text-center py-6">No groups created yet. Click "+ Create New Group" above to start.</p>';
+      }
+    }
+
+    async function inspectGroup(id) {
+      const res = await fetch(`/api/admin/groups/${id}`);
+      const data = await res.json();
+      if (!data.group) return alert('Error loading group details');
+
+      document.getElementById('inspectGroupName').innerText = data.group.group_name;
+      document.getElementById('inspectGroupMeta').innerText = `${data.group.course_subject} • ${data.group.project_title} • ${data.members.length} Members`;
+      document.getElementById('exportCsvBtn').href = `/api/admin/groups/${id}/export-csv`;
+
+      const rosterBody = document.getElementById('inspectRosterBody');
+      rosterBody.innerHTML = data.members.map(m => `
+        <tr>
+          <td class="p-2.5 font-medium">${m.full_name} ${m.is_leader ? '<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-bold ml-1">Leader</span>' : ''}</td>
+          <td class="p-2.5">${m.is_leader ? 'Group Leader' : 'Member'}</td>
+          <td class="p-2.5">${m.email}</td>
+          <td class="p-2.5 font-mono text-slate-600">student123</td>
+        </tr>
+      `).join('');
+
+      const scoresBody = document.getElementById('inspectScoresBody');
+      scoresBody.innerHTML = data.summary.map(s => `
+        <tr>
+          <td class="p-2.5 font-medium">${s.name} ${s.is_leader ? '(Leader)' : ''}</td>
+          <td class="p-2.5 text-center font-semibold">${s.ratingsCount}</td>
+          <td class="p-2.5 text-center font-bold ${parseFloat(s.avgWeightedScore) >= 70 ? 'text-emerald-600' : 'text-slate-800'}">${s.avgWeightedScore}</td>
+          <td class="p-2.5"><span class="bg-slate-100 text-slate-800 text-[10px] px-2 py-0.5 rounded font-bold">${s.interpretation}</span></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('groupInspector').classList.remove('hidden');
+      document.getElementById('groupInspector').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function closeInspector() {
+      document.getElementById('groupInspector').classList.add('hidden');
+    }
+
+    async function openEditModal(id) {
+      const res = await fetch(`/api/admin/groups/${id}`);
+      const data = await res.json();
+      if (!data.group) return alert('Error fetching group info');
+
+      document.getElementById('editGroupId').value = data.group.id;
+      document.getElementById('editGroupName').value = data.group.group_name;
+      document.getElementById('editCourseSubject').value = data.group.course_subject;
+      document.getElementById('editProjectTitle').value = data.group.project_title;
+
+      const container = document.getElementById('editMemberInputs');
+      container.innerHTML = data.members.map(m => `
+        <div class="flex items-center space-x-2 member-row" data-id="${m.id}">
+          <input type="text" value="${m.full_name}" required class="m-name w-1/2 p-2 border rounded text-xs">
+          <input type="email" value="${m.email}" required class="m-email w-1/2 p-2 border rounded text-xs">
+          <label class="flex items-center text-xs whitespace-nowrap"><input type="checkbox" class="m-leader mr-1" ${m.is_leader ? 'checked' : ''}> Leader</label>
+          <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 font-bold px-1 text-xs">✕</button>
+        </div>
+      `).join('');
+
+      document.getElementById('editGroupModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editGroupModal').classList.add('hidden');
+    }
+
+    document.getElementById('editGroupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const groupId = document.getElementById('editGroupId').value;
+      const groupName = document.getElementById('editGroupName').value;
+      const courseSubject = document.getElementById('editCourseSubject').value;
+      const projectTitle = document.getElementById('editProjectTitle').value;
+
+      const rows = document.querySelectorAll('#editMemberInputs > div');
+      const members = [];
+      rows.forEach(row => {
+        const id = row.getAttribute('data-id') || null;
+        const name = row.querySelector('.m-name').value;
+        const email = row.querySelector('.m-email').value;
+        const isLeader = row.querySelector('.m-leader').checked;
+        if (name && email) members.push({ id, full_name: name, email, is_leader: isLeader });
+      });
+
+      const res = await fetch(`/api/admin/groups/${groupId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, courseSubject, projectTitle, members })
+      });
+      const data = await res.json();
+      if (data.success) {
+        closeEditModal();
+        loadAdminDashboard();
+      } else {
+        alert('Error updating group: ' + data.error);
+      }
+    });
+
+    async function deleteGroup(id) {
+      if (!confirm('Are you sure you want to delete this group and all its evaluations?')) return;
+      const res = await fetch(`/api/admin/groups/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        loadAdminDashboard();
+        closeInspector();
+      } else {
+        alert('Error deleting group');
+      }
+    }
+
+    document.getElementById('createGroupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const groupName = document.getElementById('adminGroupName').value;
+      const courseSubject = document.getElementById('adminCourseSubject').value;
+      const projectTitle = document.getElementById('adminProjectTitle').value;
+
+      const memberRows = document.querySelectorAll('#memberInputs > div');
+      const members = [];
+      memberRows.forEach(row => {
+        const name = row.querySelector('.m-name').value;
+        const email = row.querySelector('.m-email').value;
+        const isLeader = row.querySelector('.m-leader').checked;
+        if (name && email) members.push({ full_name: name, email, is_leader: isLeader });
+      });
+
+      const res = await fetch('/api/admin/create-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, courseSubject, projectTitle, members })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Group Created! Default student password is: ${data.defaultPassword}`);
+        document.getElementById('createGroupForm').reset();
+        toggleCreateGroupForm();
+        loadAdminDashboard();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+
+    async function loadGroupPeers() {
+      if (!currentUser.groupId) return;
+      const res = await fetch('/api/group/peers');
+      const data = await res.json();
+
+      document.getElementById('studentGroupName').innerText = data.group.group_name;
+      document.getElementById('studentCourseDisplay').innerText = data.group.course_subject;
+      document.getElementById('studentProjectDisplay').innerText = data.group.project_title;
+
+      const peerList = document.getElementById('peerList');
+      peerList.innerHTML = data.members.map(m => {
+        const isDone = data.completedIds.includes(m.id);
+        const isSelf = m.id === currentUser.id;
+        return `<button type="button" onclick="selectPeer(${m.id}, '${m.full_name}')" class="p-3 border rounded-xl text-left text-xs font-semibold shadow-sm hover:shadow transition ${isDone ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
+          <div class="flex justify-between items-center">
+            <span>${m.full_name} ${isSelf ? '(Self)' : ''}</span>
+            ${isDone ? '<span class="text-emerald-600 font-bold">✓</span>' : ''}
+          </div>
+        </button>`;
+      }).join('');
+    }
+
+    function selectPeer(id, name) {
+      selectedPeerId = id;
+      document.getElementById('targetPeerName').innerText = name;
+      document.getElementById('evalForm').classList.remove('hidden');
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        checkAuth();
+      } else {
+        const err = document.getElementById('authError');
+        err.innerText = data.error;
+        err.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      currentUser = null;
+      checkAuth();
+    });
+
+    document.getElementById('userSettingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('settingsFullName').value;
+      const email = document.getElementById('settingsEmail').value;
+      const currentPassword = document.getElementById('settingsCurrentPassword').value;
+      const newPassword = document.getElementById('settingsNewPassword').value;
+
+      const res = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, email, currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Settings updated successfully!');
+        currentUser = data.user;
+        document.getElementById('userDisplayName').innerText = currentUser.name;
+        document.getElementById('settingsCurrentPassword').value = '';
+        document.getElementById('settingsNewPassword').value = '';
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+
+    document.getElementById('evalForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedPeerId) return;
+
+      const criteria = {};
+      for (let i = 1; i <= 12; i++) {
+        const selected = document.querySelector(`input[name="c_${i}"]:checked`);
+        if (selected) criteria[i] = selected.value;
+      }
+
+      const payload = {
+        evaluateeId: selectedPeerId,
+        criteria,
+        financial: { agreedAmount: 0, actualContributed: 0 },
+        comments: {
+          contributions: document.getElementById('commentsContrib').value,
+          failures: document.getElementById('commentsFailures').value
+        }
+      };
+
+      const res = await fetch('/api/evaluations/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Evaluation Submitted! Score: ${data.overallWeightedScore} (${data.interpretation})`);
+        document.getElementById('evalForm').reset();
+        document.getElementById('evalForm').classList.add('hidden');
+        loadGroupPeers();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+
+    renderCriteriaTables();
+    checkAuth();
+  </script>
+</body>
+</html>
