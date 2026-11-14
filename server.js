@@ -72,7 +72,6 @@ app.get('/api/me', (req, res) => {
   res.json({ user: req.session.user || null });
 });
 
-// Update Profile & Security Settings for Current User
 app.put('/api/user/settings', authRequired, async (req, res) => {
   const userId = req.session.user.id;
   const { fullName, email, currentPassword, newPassword } = req.body;
@@ -83,7 +82,6 @@ app.put('/api/user/settings', authRequired, async (req, res) => {
 
     const user = rows[0];
 
-    // Password verification for changes
     if (newPassword) {
       if (!currentPassword) return res.status(400).json({ error: 'Current password is required to set a new password.' });
       const match = await bcrypt.compare(currentPassword, user.password_hash);
@@ -109,7 +107,6 @@ app.put('/api/user/settings', authRequired, async (req, res) => {
   }
 });
 
-// Admin Dashboard Summary Metrics & System-wide Stats
 app.get('/api/admin/dashboard-stats', authRequired, adminOnly, async (req, res) => {
   try {
     const [[{ totalGroups }]] = await db.execute('SELECT COUNT(*) AS totalGroups FROM groups');
@@ -128,7 +125,6 @@ app.get('/api/admin/dashboard-stats', authRequired, adminOnly, async (req, res) 
   }
 });
 
-// Admin: Groups List
 app.get('/api/admin/groups', authRequired, adminOnly, async (req, res) => {
   try {
     const [groups] = await db.execute(`
@@ -159,7 +155,6 @@ app.get('/api/admin/groups', authRequired, adminOnly, async (req, res) => {
   }
 });
 
-// Admin: Create New Group with Course & Project Title
 app.post('/api/admin/create-group', authRequired, adminOnly, async (req, res) => {
   const { groupName, courseSubject, projectTitle, members } = req.body;
   const conn = await db.getConnection();
@@ -191,7 +186,6 @@ app.post('/api/admin/create-group', authRequired, adminOnly, async (req, res) =>
   }
 });
 
-// Admin: Edit Group Name, Course, Project Title & Roster
 app.put('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) => {
   const { groupId } = req.params;
   const { groupName, courseSubject, projectTitle, members } = req.body;
@@ -242,7 +236,7 @@ app.put('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) 
   }
 });
 
-// Admin: Inspect Group Details
+// Admin: Inspect Group Details + Evaluator Submission Status (Who rendered vs pending)
 app.get('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) => {
   const { groupId } = req.params;
   try {
@@ -266,18 +260,49 @@ app.get('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) 
       ORDER BY u_evaluatee.full_name ASC
     `, [groupId]);
 
+    const totalRequiredPerMember = members.length;
+
+    // 1. Score Summary (As Evaluatee)
     const studentScores = {};
+    // 2. Submission Tracking (As Evaluator - Who rendered vs pending)
+    const submissionTracker = {};
+
     members.forEach(m => {
-      studentScores[m.id] = { id: m.id, name: m.full_name, is_leader: m.is_leader, email: m.email, ratingsCount: 0, totalWeightedScore: 0, avgWeightedScore: '0.00', interpretation: 'Pending' };
+      studentScores[m.id] = { 
+        id: m.id, 
+        name: m.full_name, 
+        is_leader: m.is_leader, 
+        email: m.email, 
+        ratingsCount: 0, 
+        totalWeightedScore: 0, 
+        avgWeightedScore: '0.00', 
+        interpretation: 'Pending' 
+      };
+      submissionTracker[m.id] = {
+        id: m.id,
+        name: m.full_name,
+        is_leader: m.is_leader,
+        email: m.email,
+        completedIds: [],
+        completedNames: [],
+        pendingNames: []
+      };
     });
 
     evaluations.forEach(ev => {
+      // Score aggregation
       if (studentScores[ev.evaluatee_id]) {
         studentScores[ev.evaluatee_id].ratingsCount += 1;
         studentScores[ev.evaluatee_id].totalWeightedScore += parseFloat(ev.overall_weighted_score);
       }
+      // Evaluator progress tracking
+      if (submissionTracker[ev.evaluator_id]) {
+        submissionTracker[ev.evaluator_id].completedIds.push(ev.evaluatee_id);
+        submissionTracker[ev.evaluator_id].completedNames.push(ev.evaluatee_name);
+      }
     });
 
+    // Finalize Scores & Pending Lists
     Object.values(studentScores).forEach(s => {
       if (s.ratingsCount > 0) {
         s.avgWeightedScore = (s.totalWeightedScore / s.ratingsCount).toFixed(2);
@@ -290,11 +315,23 @@ app.get('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) 
       }
     });
 
+    Object.values(submissionTracker).forEach(t => {
+      members.forEach(target => {
+        if (!t.completedIds.includes(target.id)) {
+          t.pendingNames.push(target.id === t.id ? `${target.full_name} (Self)` : target.full_name);
+        }
+      });
+      t.submittedCount = t.completedIds.length;
+      t.requiredCount = totalRequiredPerMember;
+      t.isDone = t.submittedCount >= totalRequiredPerMember && totalRequiredPerMember > 0;
+    });
+
     res.json({
       group,
       members,
       evaluations,
-      summary: Object.values(studentScores)
+      summary: Object.values(studentScores),
+      submissionTracker: Object.values(submissionTracker)
     });
 
   } catch (err) {
@@ -302,7 +339,6 @@ app.get('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) 
   }
 });
 
-// Admin: Delete Group
 app.delete('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, res) => {
   const { groupId } = req.params;
   try {
@@ -313,7 +349,6 @@ app.delete('/api/admin/groups/:groupId', authRequired, adminOnly, async (req, re
   }
 });
 
-// Admin: Export CSV Matrix Report
 app.get('/api/admin/groups/:groupId/export-csv', authRequired, adminOnly, async (req, res) => {
   const { groupId } = req.params;
   try {
@@ -349,7 +384,6 @@ app.get('/api/admin/groups/:groupId/export-csv', authRequired, adminOnly, async 
   }
 });
 
-// Student Group & Peer Info (Fetches preset course_subject & project_title set by Admin)
 app.get('/api/group/peers', authRequired, async (req, res) => {
   const user = req.session.user;
   if (!user.groupId) return res.status(400).json({ error: 'User is not assigned to any group.' });
@@ -374,7 +408,6 @@ app.get('/api/group/peers', authRequired, async (req, res) => {
   }
 });
 
-// Submit Peer Rating
 app.post('/api/evaluations/submit', authRequired, async (req, res) => {
   const evaluatorId = req.session.user.id;
   const groupId = req.session.user.groupId;
@@ -384,7 +417,6 @@ app.post('/api/evaluations/submit', authRequired, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Fetch preset course & project details set by Admin for this group
     const [[group]] = await conn.execute('SELECT course_subject, project_title FROM groups WHERE id = ?', [groupId]);
     if (!group) throw new Error("Group details not found.");
 
