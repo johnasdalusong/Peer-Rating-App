@@ -483,3 +483,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+const app = express();
+app.set('trust proxy', 1);
+app.use(express.json());
