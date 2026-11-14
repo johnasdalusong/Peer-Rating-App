@@ -108,7 +108,7 @@
           </button>
         </div>
 
-        <!-- Create Group Collapsible Form (Admin Configures Course & Project Title) -->
+        <!-- Create Group Collapsible Form -->
         <form id="createGroupForm" class="hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
           <div class="flex justify-between items-center border-b pb-2">
             <h4 class="font-bold text-slate-800 text-sm">Create New Group & Set Course Settings</h4>
@@ -209,23 +209,25 @@
             </div>
           </div>
 
+          <!-- Evaluator Submission Tracker (Who rendered vs pending) -->
           <div>
-            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Group Roster & Login Passwords</h4>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Student Submission Tracking (Who Rendered vs Pending)</h4>
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left bg-slate-50 border rounded-lg">
                 <thead class="bg-slate-100 border-b">
                   <tr>
-                    <th class="p-2.5">Name</th>
-                    <th class="p-2.5">Role</th>
-                    <th class="p-2.5">Email</th>
-                    <th class="p-2.5">Default Password</th>
+                    <th class="p-2.5">Student Evaluator</th>
+                    <th class="p-2.5 text-center">Status</th>
+                    <th class="p-2.5 text-center">Rendered</th>
+                    <th class="p-2.5">Pending / Missing Ratings For</th>
                   </tr>
                 </thead>
-                <tbody id="inspectRosterBody" class="divide-y"></tbody>
+                <tbody id="inspectSubmissionTrackerBody" class="divide-y"></tbody>
               </table>
             </div>
           </div>
 
+          <!-- Student Matrix Score Summaries -->
           <div>
             <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Peer Evaluation Final Scores</h4>
             <div class="overflow-x-auto">
@@ -239,6 +241,24 @@
                   </tr>
                 </thead>
                 <tbody id="inspectScoresBody" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Group Roster & Passwords -->
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Group Roster & Login Passwords</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left bg-slate-50 border rounded-lg">
+                <thead class="bg-slate-100 border-b">
+                  <tr>
+                    <th class="p-2.5">Name</th>
+                    <th class="p-2.5">Role</th>
+                    <th class="p-2.5">Email</th>
+                    <th class="p-2.5">Default Password</th>
+                  </tr>
+                </thead>
+                <tbody id="inspectRosterBody" class="divide-y"></tbody>
               </table>
             </div>
           </div>
@@ -542,16 +562,26 @@
       document.getElementById('inspectGroupMeta').innerText = `${data.group.course_subject} • ${data.group.project_title} • ${data.members.length} Members`;
       document.getElementById('exportCsvBtn').href = `/api/admin/groups/${id}/export-csv`;
 
-      const rosterBody = document.getElementById('inspectRosterBody');
-      rosterBody.innerHTML = data.members.map(m => `
-        <tr>
-          <td class="p-2.5 font-medium">${m.full_name} ${m.is_leader ? '<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-bold ml-1">Leader</span>' : ''}</td>
-          <td class="p-2.5">${m.is_leader ? 'Group Leader' : 'Member'}</td>
-          <td class="p-2.5">${m.email}</td>
-          <td class="p-2.5 font-mono text-slate-600">student123</td>
-        </tr>
-      `).join('');
+      // 1. Render Student Submission Tracker (Who rendered vs pending)
+      const trackerBody = document.getElementById('inspectSubmissionTrackerBody');
+      trackerBody.innerHTML = data.submissionTracker.map(t => {
+        const badgeClass = t.isDone ? 'bg-emerald-100 text-emerald-800' : (t.submittedCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800');
+        const badgeText = t.isDone ? 'Completed' : (t.submittedCount > 0 ? 'In Progress' : 'Not Started');
+        const pendingDisplay = t.isDone 
+          ? '<span class="text-emerald-600 font-semibold">All ratings rendered ✓</span>' 
+          : `<span class="text-red-600">${t.pendingNames.join(', ')}</span>`;
 
+        return `
+          <tr>
+            <td class="p-2.5 font-medium">${t.name} ${t.is_leader ? '<span class="text-[10px] text-amber-700 font-bold">(Leader)</span>' : ''}</td>
+            <td class="p-2.5 text-center"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${badgeClass}">${badgeText}</span></td>
+            <td class="p-2.5 text-center font-bold">${t.submittedCount} / ${t.requiredCount}</td>
+            <td class="p-2.5">${pendingDisplay}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // 2. Render Score Matrix Table
       const scoresBody = document.getElementById('inspectScoresBody');
       scoresBody.innerHTML = data.summary.map(s => `
         <tr>
@@ -559,6 +589,17 @@
           <td class="p-2.5 text-center font-semibold">${s.ratingsCount}</td>
           <td class="p-2.5 text-center font-bold ${parseFloat(s.avgWeightedScore) >= 70 ? 'text-emerald-600' : 'text-slate-800'}">${s.avgWeightedScore}</td>
           <td class="p-2.5"><span class="bg-slate-100 text-slate-800 text-[10px] px-2 py-0.5 rounded font-bold">${s.interpretation}</span></td>
+        </tr>
+      `).join('');
+
+      // 3. Render Roster Table
+      const rosterBody = document.getElementById('inspectRosterBody');
+      rosterBody.innerHTML = data.members.map(m => `
+        <tr>
+          <td class="p-2.5 font-medium">${m.full_name} ${m.is_leader ? '<span class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-bold ml-1">Leader</span>' : ''}</td>
+          <td class="p-2.5">${m.is_leader ? 'Group Leader' : 'Member'}</td>
+          <td class="p-2.5">${m.email}</td>
+          <td class="p-2.5 font-mono text-slate-600">student123</td>
         </tr>
       `).join('');
 
